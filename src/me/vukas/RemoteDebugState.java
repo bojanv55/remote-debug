@@ -10,8 +10,13 @@ import com.intellij.execution.configurations.RemoteState;
 import com.intellij.execution.impl.ConsoleViewImpl;
 import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleViewContentType;
+import com.intellij.ide.plugins.IdeaPluginDescriptor;
+import com.intellij.ide.plugins.PluginManager;
+import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
+
+import javax.swing.*;
 
 public class RemoteDebugState implements RemoteState {
     private final Project a;
@@ -27,9 +32,9 @@ public class RemoteDebugState implements RemoteState {
         RemoteDebugProcessHandler var4 = new RemoteDebugProcessHandler(this.a);
         var3.attachToProcess(var4);
 
-
         //https://github.com/JetBrains/intellij-community/blob/7a4aac4280588c4fe9a258ea9b15085588c6714c/java/execution/impl/src/com/intellij/execution/remote/RemoteConfigurable.java
-        var3.print("bagababgabgbag", ConsoleViewContentType.NORMAL_OUTPUT);
+        //app https://github.com/JetBrains/intellij-community/tree/7a4aac4280588c4fe9a258ea9b15085588c6714c/java/execution/impl/src/com/intellij/execution/application
+        var3.print("bagababgabgbag \n", ConsoleViewContentType.NORMAL_OUTPUT);
 
         return new DefaultExecutionResult(var3, var4);
     }

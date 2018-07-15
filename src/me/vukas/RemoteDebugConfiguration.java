@@ -5,6 +5,7 @@ import com.intellij.debugger.settings.DebuggerSettings;
 import com.intellij.diagnostic.logging.LogConfigurationPanel;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.Executor;
+import com.intellij.execution.application.ApplicationConfigurable;
 import com.intellij.execution.configurations.*;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.RunConfigurationWithSuppressedDefaultRunAction;
@@ -47,6 +48,10 @@ public class RemoteDebugConfiguration extends ModuleBasedConfiguration<JavaRunCo
             debuggerSettings.LOCAL = false;
             debuggerSettings.setDebugPort("5555");
             debuggerSettings.setTransport(DebuggerSettings.SOCKET_TRANSPORT);
+
+
+
+            //new ApplicationConfigurable(getProject())
         }
         return new RemoteDebugState(getProject(), createRemoteConnection());
     }
