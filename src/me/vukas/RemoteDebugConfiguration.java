@@ -33,6 +33,8 @@ import com.intellij.openapi.util.WriteExternalException;
 public class RemoteDebugConfiguration extends ModuleBasedConfiguration<JavaRunConfigurationModule>
         implements RunConfigurationWithSuppressedDefaultRunAction, RemoteRunProfile {
 
+
+
     public String APPCONF = "ApplicationConfigurationName";
     public String HOST = "localhost";
     public String PORT = "55004";
