@@ -2,6 +2,7 @@ package me.vukas;
 
 import java.util.Collection;
 
+import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +26,9 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.options.SettingsEditorGroup;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.DefaultJDOMExternalizer;
+import com.intellij.openapi.util.InvalidDataException;
+import com.intellij.openapi.util.WriteExternalException;
 
 public class RemoteDebugConfiguration extends ModuleBasedConfiguration<JavaRunConfigurationModule>
         implements RunConfigurationWithSuppressedDefaultRunAction, RemoteRunProfile {
@@ -32,6 +36,18 @@ public class RemoteDebugConfiguration extends ModuleBasedConfiguration<JavaRunCo
     public String APPCONF = "ApplicationConfigurationName";
     public String HOST = "localhost";
     public String PORT = "55004";
+
+	@Override
+	public void writeExternal(@NotNull final Element element) throws WriteExternalException {
+		super.writeExternal(element);
+		DefaultJDOMExternalizer.writeExternal(this, element);
+	}
+
+	@Override
+	public void readExternal(@NotNull final Element element) throws InvalidDataException {
+		super.readExternal(element);
+		DefaultJDOMExternalizer.readExternal(this, element);
+	}
 
     public RemoteDebugConfiguration(final Project project, ConfigurationFactory configurationFactory) {
         super(new JavaRunConfigurationModule(project, true), configurationFactory);
