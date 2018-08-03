@@ -24,7 +24,7 @@ public class RemoteDebugProcessHandler extends ProcessHandler {
 			public void processDetached(DebugProcess var1x, boolean var2) {
 				var1.removeDebugProcessListener(this);
 				RemoteDebugProcessHandler.this.notifyProcessDetached();
-				out.println("[STOP]");
+				out.println("<STOP_DEBUG_PROCESS />");
 			}
 		};
 		var1.addDebugProcessListener(var2);

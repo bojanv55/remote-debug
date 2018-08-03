@@ -1,12 +1,13 @@
 package me.vukas;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -26,14 +27,40 @@ import com.intellij.openapi.util.Key;
 
 public class RemoteDebugState implements RemoteState {
     private final Project a;
-    private final RemoteConnection b;
+    private RemoteConnection b;
+    private Pattern patternPort = Pattern.compile("<START_DEBUG_PROCESS_PORT>((?!</START_DEBUG_PROCESS_PORT>$).*)</START_DEBUG_PROCESS_PORT>");
+    private String port;
+    private String cl;
+
+    public String getPort(){
+        return this.port;
+    }
 
     private ConsoleViewImpl var3;
     private final AnsiEscapeDecoder myAnsiEscapeDecoder = new AnsiEscapeDecoder();
 
-    public RemoteDebugState(Project var1, RemoteConnection var2) {
+    public RemoteDebugState(Project var1/*, RemoteConnection var2*/, String HOST, Integer PORT, String cl) {
         this.a = var1;
-        this.b = var2;
+        this.cl = cl;
+        /*this.b = var2;*/
+
+
+
+        try {
+            clientSocket = new Socket(HOST, PORT);
+            out = new PrintWriter(clientSocket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+            out.println("<START_DEBUG_PROCESS_PORT />");
+            Matcher m;
+            if ((m = patternPort.matcher(in.readLine())).matches()) {
+                this.port = m.group(1);
+                this.b = new RemoteConnection(true, HOST, this.port, false);
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     private Socket clientSocket;
@@ -43,14 +70,13 @@ public class RemoteDebugState implements RemoteState {
     public ExecutionResult execute(Executor var1, @NotNull ProgramRunner var2) throws ExecutionException {
 
 
+
         var3 = new ConsoleViewImpl(this.a, false);
 
         try {
-            clientSocket = new Socket("10.10.121.137", 30506);
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            out.println("[START]");
+
+            out.println("<START_DEBUG_PROCESS>"+this.cl.replace("\n", " ").replace("\r", " ")+"</START_DEBUG_PROCESS>");
 
             ExecutorService es = Executors.newSingleThreadExecutor();
             es.execute(() -> {
@@ -68,14 +94,16 @@ public class RemoteDebugState implements RemoteState {
                 }
             });
 
-            Thread.sleep(1000); //!!!! WAIT FOR SERVER TO START DEBUG JVM
+            //Thread.sleep(10000); //!!!! WAIT FOR SERVER TO START DEBUG JVM
+//            Matcher m;
+//            while ((m = patternPort.matcher(in.readLine())).matches()) {
+//                String port = m.group(1);
+//                this.b = new RemoteConnection(true, "10.10.121.137", port, false);
+//            }
 
             //out.println("[START]");
         }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        catch (InterruptedException e) {
+        catch (Exception e) {
             e.printStackTrace();
         }
 

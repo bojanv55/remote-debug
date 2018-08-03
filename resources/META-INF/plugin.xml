@@ -5,13 +5,12 @@
   <vendor email="bojan@vukas.me" url="http://www.vukas.me">YourCompany</vendor>
 
   <description><![CDATA[
-      Enter short description for your plugin here.<br>
-      <em>most HTML tags may be used</em>
+      Allows remote debug of java code inside docker images or remote linux server.<br />
+      Nice if you want to do development on windows and debug and run code in linux server.
     ]]></description>
 
   <change-notes><![CDATA[
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>
+      Created initial version with minimal features.
     ]]>
   </change-notes>
 

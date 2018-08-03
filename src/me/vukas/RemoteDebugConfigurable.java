@@ -1,138 +1,74 @@
 package me.vukas;
 
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.swing.ComboBoxModel;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.application.options.ModuleDescriptionsComboBox;
+import com.intellij.execution.application.ApplicationConfiguration;
 import com.intellij.execution.configurations.RemoteConnection;
-import com.intellij.execution.remote.RemoteConfiguration;
+import com.intellij.execution.configurations.RunProfile;
+import com.intellij.execution.impl.RunManagerImpl;
 import com.intellij.execution.ui.ConfigurationModuleSelector;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.projectRoots.JavaSdkVersion;
-import com.intellij.openapi.projectRoots.JavaSdkVersionUtil;
-import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.ui.ComboBox;
-import com.intellij.openapi.util.SystemInfo;
+import com.intellij.ui.CollectionComboBoxModel;
+import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.SideBorder;
 import com.intellij.util.ui.JBUI;
-import org.jetbrains.annotations.NotNull;
-
-import javax.swing.*;
-import java.awt.*;
-import java.util.Arrays;
 
 public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfiguration> {
-    private enum Mode {
-        ATTACH("Attach to remote JVM"),
-        LISTEN("Listen to remote JVM");
 
-        private final String text;
-        Mode(String text) {
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
-    }
-
-    private enum Transport {
-        SOCKET("Socket"),
-        SHMEM("Shared memory");
-
-        private final String text;
-        Transport(String text) {
-            this.text = text;
-        }
-
-        @Override
-        public String toString() {
-            return text;
-        }
-    }
-
-    private enum JDKVersionItem {
-        JDK9(JavaSdkVersion.JDK_1_9) {
-            @Override
-            String getLaunchCommandLine(RemoteConnection connection) {
-                String commandLine = JDK5to8.getLaunchCommandLine(connection);
-                if (connection.isUseSockets() && !connection.isServerMode()) {
-                    commandLine = commandLine.replace(connection.getAddress(), "*:" + connection.getAddress());
-                }
-                return commandLine;
-            }
-
-            @Override
-            public String toString() {
-                return "JDK 9 or later";
-            }
-        },
-        JDK5to8(JavaSdkVersion.JDK_1_5)  {
-            @Override
-            String getLaunchCommandLine(RemoteConnection connection) {
-                return connection.getLaunchCommandLine().replace("-Xdebug", "").replace("-Xrunjdwp:", "-agentlib:jdwp=").trim();
-            }
-
-            @Override
-            public String toString() {
-                return "JDK 5 - 8";
-            }
-        },
-        JDK1_4(JavaSdkVersion.JDK_1_4) {
-            @Override
-            String getLaunchCommandLine(RemoteConnection connection) {
-                return connection.getLaunchCommandLine();
-            }
-
-            @Override
-            public String toString() {
-                return "JDK 1.4.x";
-            }
-        },
-        JDK1_3(JavaSdkVersion.JDK_1_3) {
-            @Override
-            String getLaunchCommandLine(RemoteConnection connection) {
-                return "-Xnoagent -Djava.compiler=NONE " + connection.getLaunchCommandLine();
-            }
-
-            @Override
-            public String toString() {
-                return "JDK 1.3.x or earlier";
-            }
-        };
-
-        private final JavaSdkVersion myVersion;
-
-        JDKVersionItem(JavaSdkVersion version) {
-            myVersion = version;
-        }
-
-        abstract String getLaunchCommandLine(RemoteConnection connection);
-    }
 
     private final JPanel          mainPanel;
     private final JTextArea       myArgsArea = new JTextArea();
-    private final JComboBox<Mode> myModeCombo = new ComboBox<>(Mode.values());
-    private final JComboBox<Transport> myTransportCombo = new ComboBox<>(Transport.values());
+
+    private List<String> configItems = new ArrayList<>(Collections.singletonList("Select..."));
+    private ComboBoxModel<String> appConfigs = new CollectionComboBoxModel<>(configItems);
 
     private final ConfigurationModuleSelector myModuleSelector;
 
+    private final JComboBox<String> myModeCombo = new ComboBox<>(appConfigs);
+    //private final JTextField myACN = new JTextField();
     private final JTextField myHostName = new JTextField();
+    private final JTextField myPort = new JTextField();
     private final JTextField myAddress = new JTextField();
 
+    private Project p;
+
     public RemoteDebugConfigurable(Project project) {
-        myTransportCombo.setSelectedItem(Transport.SOCKET);
+
+        this.p = project;
+
+        RunManagerImpl manager = RunManagerImpl.getInstanceImpl(project);
+        List<String> rc = manager.getAllConfigurationsList()
+            .stream().filter(ApplicationConfiguration.class::isInstance).map(RunProfile::getName).collect(Collectors.toList());
+
+        //configItems =
+        configItems.addAll(rc);
 
 
         GridBagConstraints gc = new GridBagConstraints(0, 0, 2, 1, 0, 0, GridBagConstraints.LINE_START, GridBagConstraints.NONE,
                 JBUI.insets(4, 0, 0, 8), 0, 0);
         mainPanel = createModePanel(gc);
-
-        JavaSdkVersion version = JavaSdkVersionUtil.getJavaSdkVersion(ProjectRootManager.getInstance(project).getProjectSdk());
-        JDKVersionItem vi = version != null ?
-                Arrays.stream(JDKVersionItem.values()).filter(v -> version.isAtLeast(v.myVersion)).findFirst().orElse(JDKVersionItem.JDK9)
-                : JDKVersionItem.JDK9;
 
         myArgsArea.setLineWrap(true);
         myArgsArea.setWrapStyleWord(true);
@@ -141,8 +77,7 @@ public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfigura
         myArgsArea.setBorder(new SideBorder(JBColor.border(), SideBorder.ALL));
         myArgsArea.setMinimumSize(myArgsArea.getPreferredSize());
 
-        updateArgsText(vi);
-
+        updateArgsText();
 
         gc.gridx = 0;
         gc.gridy++;
@@ -151,7 +86,6 @@ public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfigura
         gc.fill = GridBagConstraints.HORIZONTAL;
         gc.weightx = 0;
         gc.insets = JBUI.insetsTop(10);
-
 
         ModuleDescriptionsComboBox myModuleCombo = new ModuleDescriptionsComboBox();
         myModuleCombo.allowEmptySelection("<whole project>");
@@ -171,31 +105,48 @@ public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfigura
         gc.weighty = 1.0;
         mainPanel.add(new JPanel(), gc);
 
+        DocumentListener textUpdateListener = new DocumentAdapter() {
+            @Override
+            protected void textChanged(DocumentEvent e) {
+                //updateArgsText(ddl.getChosenItem());
+            }
+        };
+
+        myHostName.getDocument().addDocumentListener(textUpdateListener);
+
 
 
     }
 
-    private void updateArgsText(@NotNull JDKVersionItem vi) {
-        boolean useSockets = myTransportCombo.getSelectedItem() == Transport.SOCKET;
+    private void updateArgsText() {
 
-        RemoteConnection connection = new RemoteConnection(useSockets, myHostName.getText().trim(),
-                useSockets ? "" : myAddress.getText().trim(),
-                myModeCombo.getSelectedItem() == Mode.LISTEN
-        );
 
-        myArgsArea.setText(vi.getLaunchCommandLine(connection));
+        RemoteConnection connection = new RemoteConnection(true, myHostName.getText().trim(),"", false);
+
     }
 
     @Override
     protected void resetEditorFrom(@NotNull RemoteDebugConfiguration rc) {
-
-
         myModuleSelector.reset(rc);
+        myModeCombo.setSelectedItem(rc.APPCONF);
+        myHostName.setText(rc.HOST);
+        myPort.setText(rc.PORT);
     }
 
     @Override
     protected void applyEditorTo(@NotNull RemoteDebugConfiguration rc) throws ConfigurationException {
-
+        rc.APPCONF = myModeCombo.getSelectedItem().toString().trim();
+        if (rc.APPCONF.isEmpty()) {
+            rc.APPCONF = null;
+        }
+        rc.HOST = myHostName.getText().trim();
+        if (rc.HOST.isEmpty()) {
+            rc.HOST = null;
+        }
+        rc.PORT = myPort.getText().trim();
+        if (rc.PORT.isEmpty()) {
+            rc.PORT = null;
+        }
         myModuleSelector.applyTo(rc);
     }
 
@@ -208,73 +159,34 @@ public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfigura
     private JPanel createModePanel(GridBagConstraints gc) {
         JPanel panel = new JPanel(new GridBagLayout());
 
-        JLabel modeLabel = new JLabel("Debugger mode:");
-        JLabel transportLabel = new JLabel("Transport:");
+        JLabel acnLabel = new JLabel("Application Configuration Name:");
         JLabel hostLabel = new JLabel("Host:");
-
-        panel.add(modeLabel, gc);
+        JLabel portLabel = new JLabel("Port:");
 
         gc.gridx += 2;
         gc.gridwidth = 1;
         gc.insets = JBUI.insetsTop(4);
-        panel.add(myModeCombo, gc);
 
         gc.gridx++;
         gc.weightx = 1.0;
         gc.gridwidth = 2;
-        gc.fill = GridBagConstraints.REMAINDER;
-        panel.add(new JPanel(), gc);
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        JPanel jp = new JPanel();
+        panel.add(jp, gc);
 
-        if (SystemInfo.isWindows) {
-            JLabel addressLabel = new JLabel("Address:");
+        gc.gridy++;
+        gc.gridx = 0;
+        gc.weightx = 0.0;
+        gc.gridwidth = 1;
+        gc.insets = JBUI.insets(4, 0, 0, 8);
+        gc.fill = GridBagConstraints.NONE;
+        panel.add(acnLabel, gc);
 
-            addressLabel.setVisible(false);
-            myAddress.setVisible(false);
-
-            gc.gridx = 0;
-            gc.gridy++;
-            gc.weightx = 0.0;
-            gc.gridwidth = 2;
-            gc.fill = GridBagConstraints.NONE;
-            gc.insets = JBUI.insets(4, 0, 0, 8);
-            panel.add(transportLabel, gc);
-
-            gc.gridx += 2;
-            gc.gridwidth = 1;
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            gc.insets = JBUI.insetsTop(4);
-            panel.add(myTransportCombo, gc);
-
-            gc.gridx++;
-            gc.weightx = 1.0;
-            gc.gridwidth = 2;
-            gc.fill = GridBagConstraints.REMAINDER;
-            panel.add(new JPanel(), gc);
-
-            gc.gridy++;
-            gc.gridx = 0;
-            gc.weightx = 0.0;
-            gc.gridwidth = 1;
-            gc.insets = JBUI.insets(4, 0, 0, 8);
-            gc.fill = GridBagConstraints.NONE;
-            panel.add(addressLabel, gc);
-
-            gc.gridx++;
-            gc.gridwidth = 2;
-            gc.insets = JBUI.insetsTop(4);
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            panel.add(myAddress, gc);
-
-            myTransportCombo.addActionListener(e -> {
-                boolean isShmem = myTransportCombo.getSelectedItem() == Transport.SHMEM;
-
-                hostLabel.setVisible(!isShmem);
-                myHostName.setVisible(!isShmem);
-
-                addressLabel.setVisible(isShmem);
-                myAddress.setVisible(isShmem);
-            });
-        }
+        gc.gridx++;
+        gc.gridwidth = 2;
+        gc.insets = JBUI.insetsTop(4);
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(myModeCombo, gc);
 
         gc.gridy++;
         gc.gridx = 0;
@@ -289,6 +201,20 @@ public class RemoteDebugConfigurable extends SettingsEditor<RemoteDebugConfigura
         gc.insets = JBUI.insetsTop(4);
         gc.fill = GridBagConstraints.HORIZONTAL;
         panel.add(myHostName, gc);
+
+        gc.gridy++;
+        gc.gridx = 0;
+        gc.weightx = 0.0;
+        gc.gridwidth = 1;
+        gc.insets = JBUI.insets(4, 0, 0, 8);
+        gc.fill = GridBagConstraints.NONE;
+        panel.add(portLabel, gc);
+
+        gc.gridx++;
+        gc.gridwidth = 2;
+        gc.insets = JBUI.insetsTop(4);
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(myPort, gc);
 
         gc.gridx += 2;
         gc.gridwidth = 1;
