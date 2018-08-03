@@ -2,11 +2,16 @@
   <id>me.vukas.remote-debug</id>
   <name>Remote Debug</name>
   <version>1.0</version>
-  <vendor email="bojan@vukas.me" url="http://www.vukas.me">YourCompany</vendor>
+  <vendor email="bojan@vukas.me" url="http://www.vukas.me">vukas.me</vendor>
 
   <description><![CDATA[
       Allows remote debug of java code inside docker images or remote linux server.<br />
       Nice if you want to do development on windows and debug and run code in linux server.
+      <br /><br />
+      In order to use this plugin, you will need my prepared docker image on dockerhub "bojanv55/rds". <br />
+      This image has server that communicated with plugin and executes your local code in docker.
+
+      For more info, tutorial is at https://bojanv55.wordpress.com/
     ]]></description>
 
   <change-notes><![CDATA[
