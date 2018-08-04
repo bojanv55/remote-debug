@@ -3,13 +3,22 @@ package me.vukas;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.intellij.openapi.actionSystem.DataKeys;
+import com.intellij.openapi.ui.MessageType;
+import com.intellij.openapi.ui.popup.Balloon;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
+import com.intellij.openapi.wm.StatusBar;
+import com.intellij.openapi.wm.WindowManager;
+import com.intellij.ui.awt.RelativePoint;
 import org.jetbrains.annotations.NotNull;
 
 import com.intellij.execution.DefaultExecutionResult;
@@ -50,7 +59,8 @@ public class RemoteDebugState implements RemoteState {
 
 
         try {
-            clientSocket = new Socket(HOST, PORT);
+            clientSocket = new Socket();
+            clientSocket.connect(new InetSocketAddress(HOST, PORT), 2000);
             out = new PrintWriter(clientSocket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
@@ -62,6 +72,13 @@ public class RemoteDebugState implements RemoteState {
             }
         }
         catch (Exception e){
+            StatusBar statusBar = WindowManager.getInstance().getStatusBar(var1);
+            JBPopupFactory.getInstance()
+                    .createHtmlTextBalloonBuilder("Cannot make connection to server part. Please make sure that ports are open. For more instructions you can check https://bojanv55.wordpress.com/2018/08/03/intellij-idea-remote-debug-of-java-code-inside-docker-container/", MessageType.ERROR, null)
+                    .setFadeoutTime(7500)
+                    .createBalloon()
+                    .show(RelativePoint.getCenterOf(statusBar.getComponent()), Balloon.Position.above);
+            clientSocket = null;
             e.printStackTrace();
         }
     }
@@ -92,6 +109,10 @@ public class RemoteDebugState implements RemoteState {
     private CountDownLatch cdl = new CountDownLatch(1);
 
     public RemoteConnection getRemoteConnection() {
+
+        if(clientSocket==null){
+            return null;
+        }
 
         //==
 
@@ -135,7 +156,7 @@ public class RemoteDebugState implements RemoteState {
 
 
         try {
-            this.cdl.await();
+            this.cdl.await(10, TimeUnit.SECONDS);
             this.cdl = new CountDownLatch(1);
         } catch (InterruptedException e) {
             e.printStackTrace();
